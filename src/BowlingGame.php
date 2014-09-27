@@ -5,9 +5,13 @@ class BowlingGame
     const FRAMES_PER_GAME = 10;
 
     private $rolls = [];
+    private $scorecard = [];
 
     public function roll($pins)
     {
+        if ($pins < 0 || $pins > 10) {
+            throw new InvalidArgumentException('Invalid roll!');
+        }
         $this->rolls[] = $pins;
     }
 
@@ -21,53 +25,77 @@ class BowlingGame
         $score = 0;
         $roll  = 0;
 
-        $frames = self::FRAMES_PER_GAME;
-
-        for ($frame = 1; $frame <= $frames; $frame++) {
-            $r           = $this->rolls;
-            if (count($r) === $roll) {
-                break;
-            }
-            $thisRoll    = $r[$roll];
-            $lastRoll    = (isset($r[$roll-1])) ? $r[$roll-1] : 0;
-            $twoRollsAgo = (isset($r[$roll-2])) ? $r[$roll-2] : 0;
-
-            // If last frame was a spare
-            if ($lastRoll + $twoRollsAgo === 10 && $lastRoll > 0 && $twoRollsAgo > 0) {
-                $score += $thisRoll;
-            }
-
-            if ($this->isStrike($lastRoll)) {
-                $score += 10;
-            }
-            if ($this->isStrike($twoRollsAgo)) {
-                $score += 10;
-            }
-
-            $score += $thisRoll;
-            if ($this->isStrike($thisRoll)) {
-                if ($roll+1 === self::FRAMES_PER_GAME) {
-                    $frames++;
+        for ($frame = 1; $frame <= self::FRAMES_PER_GAME; $frame++) {
+            if ($this->isSpare($roll)) {
+                $score += (10 + $this->firstBowlAfterSpare($roll));
+                $roll += 2;
+            } else if ($this->isStrike($roll)) {
+                $score += (10 + $this->next2Rolls($roll));
+                $roll ++;
+            } else {
+                if ($this->thisRoll($roll) + $this->nextRoll($roll) > 10) {
+                    throw new \InvalidArgumentException('There aren\'t enough pins!');
                 }
-
-                $roll++;
-                continue;
+                $score += $this->rolls[$roll++];
+                $score += $this->rolls[$roll++];
             }
-
-            $roll++;
-            if (count($r) === $roll) {
-                break;
-            }
-
-            $score += $r[$roll];
-            $roll++;
         }
 
         return $score;
     }
 
-    protected function isStrike($pins)
+    public function scorecard()
     {
-        return $pins === 10;
+        $score = 0;
+        $roll  = 0;
+
+        for ($frame = 1; $frame <= self::FRAMES_PER_GAME; $frame++) {
+            if ($this->isSpare($roll)) {
+                $score += (10 + $this->firstBowlAfterSpare($roll));
+                $scorecard[] = [$this->thisRoll($roll), '/', $score];
+                $roll += 2;
+            } else if ($this->isStrike($roll)) {
+                $score += (10 + $this->next2Rolls($roll));
+                $scorecard[] = ['X', '', $score];
+                $roll ++;
+            } else {
+                $score += $this->thisRoll($roll);
+                $score += $this->nextRoll($roll);
+                $scorecard[] = [$this->thisRoll($roll), $this->nextRoll($roll), $score];
+                $roll += 2;
+            }
+        }
+
+        return $scorecard;
+    }
+
+    protected function nextRoll($currentRoll)
+    {
+        return $this->rolls[$currentRoll+1];
+    }
+
+    protected function thisRoll($currentRoll)
+    {
+        return $this->rolls[$currentRoll];
+    }
+
+    protected function firstBowlAfterSpare($currentRoll)
+    {
+        return $this->rolls[$currentRoll+2];
+    }
+
+    protected function next2Rolls($currentRoll)
+    {
+        return $this->rolls[$currentRoll+1] + $this->rolls[$currentRoll+2];
+    }
+
+    protected function isSpare($currentRoll)
+    {
+        return $this->thisRoll($currentRoll) !== 10 && $this->rolls[$currentRoll] + $this->rolls[$currentRoll+1] === 10;
+    }
+
+    protected function isStrike($currentRoll)
+    {
+        return $this->rolls[$currentRoll] === 10;
     }
 }

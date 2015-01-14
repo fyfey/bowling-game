@@ -3,13 +3,27 @@ setup:
         action: install
 
 test:
-    php_mess_detector:
-        allow_failures: true
+    lint:
+        directory: src
     php_spec: ~
-    php_mess_detector:
-        allow_failures: true
     php_code_sniffer:
         path: src
         standard: EnableIT
         allowed_errors: -1
         allowed_warnings: -1
+    php_mess_detector:
+        allow_failures: true
+        path: src
+    php_cpd:
+        path: src
+    php_loc: ~
+
+complete:
+    email:
+        committer: true
+
+failure:
+    email:
+        committer: true
+
+
